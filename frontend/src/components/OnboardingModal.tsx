@@ -19,7 +19,7 @@ export function OnboardingModal({ isOpen, onClose }: OnboardingModalProps) {
     setIsGenerating(true);
     try {
       // Chamada real para o Backend FastAPI
-      const response = await fetch('http://localhost:8000/api/onboarding', {
+      const response = await fetch('http://129.121.33.171:8001/api/onboarding', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

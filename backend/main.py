@@ -128,7 +128,7 @@ app = FastAPI(title="Sana MVP API", version="1.0.0")
 # CORS setup para permitir que o Frontend (porta 5173) se comunique com o Backend (porta 8000)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173", "https://sana-clinico.vercel.app", "https://sana-bot.vercel.app"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
