@@ -21,7 +21,7 @@ load_dotenv()
 
 from langgraph.graph import StateGraph, END
 from typing_extensions import TypedDict
-from langchain_google_genai import ChatGoogleGenerativeAI
+import google.generativeai as genai
 from langchain_core.messages import HumanMessage, SystemMessage
 
 logging.basicConfig(level=logging.INFO)
@@ -30,13 +30,18 @@ logger = logging.getLogger(__name__)
 # =======================================================
 # 1. Configuração
 # =======================================================
-SUPABASE_URL = os.getenv("SANA_SUPABASE_URL", "")
-SUPABASE_KEY = os.getenv("SANA_SUPABASE_KEY", "")
+SANA_SUPABASE_URL = os.getenv("SANA_SUPABASE_URL", "")
+SANA_SUPABASE_KEY = os.getenv("SANA_SUPABASE_KEY", "")
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "")
 
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+supabase: Client = create_client(SANA_SUPABASE_URL, SANA_SUPABASE_KEY)
 
-llm_gemini = ChatGoogleGenerativeAI(model="gemini-3.1-flash-live-preview", temperature=0.1)
+# Configuração Google Generative AI Nativo (Mais estável para Previews)
+genai.configure(api_key=GOOGLE_API_KEY)
+# Tentamos o 3.1 Live Preview que apareceu no ListModels
+MODEL_NAME = "gemini-3.1-flash-live-preview" 
+model_native = genai.GenerativeModel(MODEL_NAME)
 
 # =======================================================
 # 2. LangGraph State
@@ -302,10 +307,42 @@ async def telegram_webhook(request: Request):
             logger.warning(f"Nao salvou observacao: {e}")
 
     if content_blocks:
-        messages = [SystemMessage(content=system_prompt), HumanMessage(content=content_blocks)]
         try:
-            ai_response = llm_gemini.invoke(messages)
-            resposta_texto = ai_response.content.strip()
+            # --- PROCESSAMENTO COM SDK NATIVO DO GOOGLE ---
+            # Prepara as partes da mensagem (texto e possivelmente imagem)
+            prompt_parts = [system_prompt]
+            
+            # Se tiver imagem, baixa e anexa como bytes
+            if "photo" in message:
+                try:
+                    file_id = message["photo"][-1]["file_id"]
+                    async with httpx.AsyncClient() as client:
+                        # Pega o file_path do Telegram
+                        f_res = await client.get(f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/getFile?file_id={file_id}")
+                        file_path = f_res.json()["result"]["file_path"]
+                        img_url = f"https://api.telegram.org/file/bot{TELEGRAM_BOT_TOKEN}/{file_path}"
+                        
+                        # Baixa a imagem real
+                        img_res = await client.get(img_url)
+                        if img_res.status_code == 200:
+                            prompt_parts.append({
+                                "mime_type": "image/jpeg",
+                                "data": img_res.content
+                            })
+                            # Adiciona o texto se houver
+                            if text:
+                                prompt_parts.append(text)
+                        else:
+                            prompt_parts.append(text or "Analise esta imagem")
+                except Exception as img_err:
+                    logger.error(f"Erro ao baixar imagem para o SDK: {img_err}")
+                    prompt_parts.append(text or "Analise esta imagem")
+            else:
+                prompt_parts.append(text)
+
+            # Invoca o modelo nativo
+            response = model_native.generate_content(prompt_parts)
+            resposta_texto = response.text.strip()
 
             # Salva resposta da IA no prontuário e no MemPalace
             try:
@@ -327,7 +364,7 @@ async def telegram_webhook(request: Request):
 
             await send_telegram_message(chat_id, resposta_texto)
         except Exception as e:
-            logger.error(f"Erro no Gemini: {e}")
+            logger.error(f"Erro no Gemini Nativo: {e}")
             await send_telegram_message(chat_id, "Estou processando sua mensagem, um momento...")
 
     return {"status": "success"}
