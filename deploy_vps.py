@@ -34,10 +34,10 @@ print("="*60)
 run_ssh("ls /root/ && echo '--- containers ---' && docker ps --format 'table {{.Names}}\t{{.Status}}' 2>/dev/null || echo '(sem docker)'")
 
 # === 2. Instalar dependências do sistema ===
-print("\n" + "="*60)
-print("📦 INSTALANDO DEPENDENCIAS DO SISTEMA")
-print("="*60)
-run_ssh("apt-get update -qq && apt-get install -y -qq python3 python3-pip python3-venv git curl && echo 'DEPS_OK'", 120)
+# print("\n" + "="*60)
+# print("📦 INSTALANDO DEPENDENCIAS DO SISTEMA")
+# print("="*60)
+# run_ssh("apt-get update -qq && apt-get install -y -qq python3 python3-pip python3-venv git curl && echo 'DEPS_OK'", 300)
 
 # === 3. Clonar ou atualizar repo ===
 print("\n" + "="*60)

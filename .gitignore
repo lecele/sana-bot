@@ -50,3 +50,6 @@ ngrok.log
 # Arquivos temporários de test
 backend/test_gemini.py
 backend/err.log
+
+.vercel
+.env*.local
