@@ -7,7 +7,7 @@ import {
   MessageSquare, Camera, Clock, Wifi, WifiOff, ChevronRight
 } from 'lucide-react'
 
-const API_URL = 'http://129.121.33.171:8001'
+const API_URL = ''
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 interface Stats {
@@ -158,7 +158,7 @@ export default function App() {
             </div>
             <div>
               <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">Sana</h1>
-              <p className="text-sky-600 text-[10px] font-extrabold uppercase tracking-widest">Medical Ops</p>
+              <p className="text-sky-600 text-[10px] font-extrabold uppercase tracking-widest">Pós Operatório</p>
             </div>
           </div>
 
@@ -241,18 +241,12 @@ export default function App() {
             >
               <RefreshCw size={20} />
             </button>
-            <button className="relative p-2 text-slate-400 hover:text-sky-600 transition-colors">
-              <Bell size={24} />
-              {observations.filter(o => o.category === 'foto-ferida').length > 0 && (
-                <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-blue-500 rounded-full border-2 border-white animate-bounce" />
-              )}
-            </button>
           </div>
         </header>
 
         {/* ── DASHBOARD ── */}
         {view === 'dashboard' && (
-          <div className="p-8 max-w-7xl mx-auto w-full space-y-8">
+          <div className="p-8 w-full space-y-8">
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">Centro de Triage</h2>
@@ -375,7 +369,7 @@ export default function App() {
 
         {/* ── PRONTUÁRIOS ATIVOS ── */}
         {view === 'patients' && (
-          <div className="p-8 max-w-7xl mx-auto w-full space-y-6">
+          <div className="p-8 w-full space-y-6">
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">Prontuários Ativos</h2>
@@ -437,7 +431,7 @@ export default function App() {
 
         {/* ── AVALIAÇÕES IA ── */}
         {view === 'observations' && (
-          <div className="p-8 max-w-7xl mx-auto w-full space-y-6">
+          <div className="p-8 w-full space-y-6">
             <div>
               <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">Avaliações IA</h2>
               <p className="text-slate-500 mt-1 font-medium">{observations.length} registro{observations.length !== 1 ? 's' : ''} no prontuário</p>
