@@ -58,7 +58,7 @@ export function OnboardingModal({ isOpen, onClose }: OnboardingModalProps) {
 
   return (
     <div 
-      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-md transition-all"
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/50 backdrop-blur-md transition-all p-4"
       onClick={(e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -66,15 +66,10 @@ export function OnboardingModal({ isOpen, onClose }: OnboardingModalProps) {
       }}
     >
       <div 
-        className="w-full sm:max-w-[480px] bg-white/95 backdrop-blur-2xl rounded-[32px] shadow-[0_35px_60px_-15px_rgba(0,0,0,0.4)] border border-white/60 overflow-hidden relative animate-in fade-in zoom-in-95 duration-300"
+        className="relative w-full max-w-[480px] max-h-[90vh] overflow-y-auto bg-white rounded-[32px] shadow-[0_35px_60px_-15px_rgba(0,0,0,0.4)] border border-slate-200"
         onClick={(e) => e.stopPropagation()}
       >
-        
-        {/* Soft Clinical Blue Glow Effects */}
-        <div className="absolute -top-32 -right-32 w-72 h-72 bg-sky-300/20 rounded-full blur-[60px] pointer-events-none" />
-        <div className="absolute -bottom-32 -left-32 w-72 h-72 bg-blue-300/20 rounded-full blur-[60px] pointer-events-none" />
-
-        {/* Close Button */}
+        {/* Close Button — sempre visível no topo */}
         <button 
           onClick={(e) => {
             e.preventDefault();
@@ -82,7 +77,7 @@ export function OnboardingModal({ isOpen, onClose }: OnboardingModalProps) {
             onClose();
           }}
           type="button"
-          className="absolute top-6 right-6 p-2 text-slate-500 hover:text-slate-900 hover:bg-slate-200 rounded-full transition-all z-[100] backdrop-blur-md bg-white/80 cursor-pointer shadow-sm border border-slate-100"
+          className="absolute top-4 right-4 p-2 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-full transition-all z-[100] bg-white cursor-pointer shadow-sm border border-slate-200"
           title="Fechar"
         >
             <X className="w-5 h-5 pointer-events-none" />
