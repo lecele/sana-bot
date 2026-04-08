@@ -36,7 +36,7 @@ TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-llm_gemini = ChatGoogleGenerativeAI(model="gemini-1.5-pro", temperature=0.1)
+llm_gemini = ChatGoogleGenerativeAI(model="gemini-3.1-flash-live-preview", temperature=0.1)
 
 # =======================================================
 # 2. LangGraph State
