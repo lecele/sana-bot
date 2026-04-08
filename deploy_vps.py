@@ -59,6 +59,37 @@ run_ssh(
     300
 )
 
+# === 4b. Instalar MemPalace (Memória Vetorial Local) ===
+print("\n" + "="*60)
+print("🧠 INSTALANDO MEMPALACE (MEMORIA VETORIAL)")
+print("="*60)
+
+# Copia o módulo de integração para o servidor
+scp_file(
+    os.path.join(os.path.dirname(__file__), "backend", "sana_memory.py"),
+    "/root/sana-bot/backend/sana_memory.py"
+)
+
+# Instala mempalace e chromadb no venv
+run_ssh(
+    "cd /root/sana-bot/backend && "
+    ".venv/bin/pip install -q 'mempalace>=3.0.0' 'chromadb>=0.5.0,<0.7' && "
+    "echo 'MEMPALACE_OK'",
+    300
+)
+
+# Inicializa o palace (cria diretório e coleção ChromaDB)
+run_ssh(
+    "mkdir -p /root/.mempalace/palace && "
+    "MEMPALACE_PALACE_PATH=/root/.mempalace/palace "
+    "/root/sana-bot/backend/.venv/bin/python3 -c \""
+    "import chromadb; "
+    "c = chromadb.PersistentClient(path='/root/.mempalace/palace'); "
+    "c.get_or_create_collection('mempalace_drawers'); "
+    "print('PALACE_INITIALIZED')\"",
+    60
+)
+
 # === 5. Criar .env no servidor ===
 print("\n" + "="*60)
 print("📝 CRIANDO .env NO SERVIDOR")
@@ -84,7 +115,7 @@ print("🔧 CONFIGURANDO SERVICO SYSTEMD")
 print("="*60)
 
 service = """[Unit]
-Description=Sana Bot Backend (FastAPI)
+Description=Sana Bot Backend (FastAPI + MemPalace)
 After=network.target
 
 [Service]
@@ -94,6 +125,7 @@ ExecStart=/root/sana-bot/backend/.venv/bin/uvicorn main:app --host 0.0.0.0 --por
 Restart=always
 RestartSec=3
 Environment=PYTHONUNBUFFERED=1
+Environment=MEMPALACE_PALACE_PATH=/root/.mempalace/palace
 
 [Install]
 WantedBy=multi-user.target

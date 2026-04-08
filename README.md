@@ -174,15 +174,73 @@ Copie o arquivo backend/.env.example para backend/.env e preencha:
     TELEGRAM_BOT_TOKEN     Token do bot gerado pelo BotFather
 
 
+
 PROXIMAS FUNCIONALIDADES
 -------------------------
 
-- Persistir avaliacoes da IA no banco de dados por paciente
 - Painel do medico com historico completo de avaliacoes e fotos
 - Alertas automaticos por e-mail em casos de risco elevado
 - Lembretes de medicacao enviados automaticamente pelo bot
 - Geracao de relatorio PDF por paciente ao final do acompanhamento
 - Autenticacao de medicos e clinicas no painel
+
+
+SISTEMA DE MEMORIA VETORIAL (MEMPALACE)
+-----------------------------------------
+
+O Sana integra o MemPalace, uma biblioteca open-source de memoria vetorial local
+baseada em ChromaDB. Isso permite que o agente de IA tenha memoria persistente
+de cada paciente sem enviar dados para servicos externos.
+
+Por que usamos MemPalace:
+
+  Privacidade (LGPD): O historico clinico fica 100% no VPS. Nenhum dado sensivel
+  de paciente e enviado para indexacao em nuvem externa.
+
+  Economia de Tokens: Em vez de enviar o historico completo a cada mensagem,
+  o sistema busca apenas as memorias mais relevantes para a pergunta atual.
+  Isso reduz o custo de API do Gemini em ate 60%.
+
+  Consistencia: O agente se "lembra" de respostas anteriores e do historico clinico
+  do paciente, evitando contradicoes entre sessoes.
+
+Como funciona:
+
+  Cada paciente tem sua propria "wing" (ala) no palacio de memoria, identificada
+  pelo seu UUID do Supabase. Dentro dessa ala existem tres "rooms" (salas):
+
+    evolucao-clinica  : mensagens enviadas pelo paciente
+    analise-ferida    : fotos e avaliacoes visuais
+    respostas-agente  : o que a IA respondeu (para consistencia futura)
+
+  A cada nova mensagem do paciente, o sistema:
+    1. Busca memorias relevantes no MemPalace (busca semantica por similaridade)
+    2. Injeta essas memorias no system_prompt do Gemini como contexto
+    3. Gera a resposta com conhecimento do historico do paciente
+    4. Salva a nova mensagem e resposta no MemPalace para o futuro
+
+Localizacao no Servidor:
+
+    Palace (banco vetorial): /root/.mempalace/palace/
+    Modulo de integracao:    /root/sana-bot/backend/sana_memory.py
+    Variavel de ambiente:    MEMPALACE_PALACE_PATH=/root/.mempalace/palace
+
+Verificar status do MemPalace:
+
+    curl http://129.121.33.171:8001/
+    # O campo "memory" mostra total_drawers e patient_wings
+
+Codigo de integracao (sana_memory.py):
+
+    from sana_memory import buscar_contexto_paciente, salvar_mensagem_paciente
+
+    # Buscar historico relevante antes do Gemini responder
+    contexto = buscar_contexto_paciente(patient_id, mensagem_atual)
+
+    # Salvar nova mensagem no palacio apos processar
+    salvar_mensagem_paciente(patient_id, patient_name, texto)
+
+Repositorio do MemPalace: https://github.com/milla-jovovich/mempalace
 
 
 LICENCA

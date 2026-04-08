@@ -8,6 +8,15 @@ from supabase import create_client, Client
 from dotenv import load_dotenv
 import httpx
 
+# MemPalace — Memória Vetorial Local
+from sana_memory import (
+    salvar_mensagem_paciente,
+    salvar_analise_ferida,
+    salvar_resposta_agente,
+    buscar_contexto_paciente,
+    status_palace,
+)
+
 load_dotenv()
 
 from langgraph.graph import StateGraph, END
@@ -97,7 +106,12 @@ class OnboardingPayload(BaseModel):
 
 @app.get("/")
 def health():
-    return {"status": "Sana MVP Backend Operational", "core": "FastAPI + LangGraph + Gemini 2.5 Flash"}
+    palace = status_palace()
+    return {
+        "status": "Sana MVP Backend Operational",
+        "core": "FastAPI + LangGraph + Gemini 2.5 Flash",
+        "memory": palace,
+    }
 
 
 @app.get("/api/stats")
@@ -215,6 +229,18 @@ async def telegram_webhook(request: Request):
 
     # --- PROCESSAMENTO COM IA ---
     content_blocks = []
+
+    # --- MEMPALACE: busca histórico do paciente para enriquecer o prompt ---
+    historico_paciente = ""
+    try:
+        pat_mem = supabase.table("sana_patient").select("id, name").eq("chat_id", chat_id).execute()
+        if pat_mem.data:
+            _pid = pat_mem.data[0]["id"]
+            _pname = pat_mem.data[0]["name"]
+            historico_paciente = buscar_contexto_paciente(_pid, text or "avaliação de ferida")
+    except Exception as _e:
+        logger.warning(f"MemPalace: não foi possível buscar contexto: {_e}")
+
     system_prompt = (
         "Voce e o Agente Clinico de Acompanhamento Sana, humano e empatico. "
         "O paciente acabou de te enviar uma mensagem ou imagem sobre a cirurgia dele.\n"
@@ -222,7 +248,8 @@ async def telegram_webhook(request: Request):
         "- Responda exatamente como um humano no WhatsApp.\n"
         "- E ESTRITAMENTE PROIBIDO usar asteriscos, hashtags ou qualquer simbolo de marcacao.\n"
         "- PROIBIDO gerar JSON, codigos ou metadados.\n"
-        "- Se o paciente mandar foto de ferida, avalie superficialmente de forma reconfortante e informe que a equipe medica validara."
+        "- Se o paciente mandar foto de ferida, avalie superficialmente de forma reconfortante e informe que a equipe medica validara.\n"
+        + (f"\n{historico_paciente}\n" if historico_paciente else "")
     )
 
     if "photo" in message:
@@ -236,9 +263,10 @@ async def telegram_webhook(request: Request):
                 content_blocks.append({"type": "text", "text": text or "Analise essa foto do meu pos-operatorio"})
 
                 # Tenta buscar encounter_id pelo chat_id para salvar a observação
-                pat_res = supabase.table("sana_patient").select("id").eq("chat_id", chat_id).execute()
+                pat_res = supabase.table("sana_patient").select("id, name").eq("chat_id", chat_id).execute()
                 if pat_res.data:
                     patient_id = pat_res.data[0]["id"]
+                    patient_name_mem = pat_res.data[0].get("name", "paciente")
                     enc_res = supabase.table("sana_encounter").select("id").eq("patient_id", patient_id).eq("status", "in-progress").execute()
                     if enc_res.data:
                         encounter_id = enc_res.data[0]["id"]
@@ -247,16 +275,19 @@ async def telegram_webhook(request: Request):
                             "category": "foto-ferida",
                             "value_string": f"Paciente enviou foto para analise via Telegram. URL: {img_url}"
                         }).execute()
+                    # Salva no MemPalace
+                    salvar_analise_ferida(patient_id, patient_name_mem, img_url, legenda=text)
         except Exception as e:
             logger.error(f"Erro ao processar foto: {e}")
             content_blocks.append({"type": "text", "text": "O paciente enviou uma foto mas houve erro tecnico. Peca desculpas e peca para reenviar."})
     else:
         content_blocks.append({"type": "text", "text": text})
-        # Salva mensagem de texto no prontuário
+        # Salva mensagem de texto no prontuário e no MemPalace
         try:
-            pat_res = supabase.table("sana_patient").select("id").eq("chat_id", chat_id).execute()
+            pat_res = supabase.table("sana_patient").select("id, name").eq("chat_id", chat_id).execute()
             if pat_res.data:
                 patient_id = pat_res.data[0]["id"]
+                patient_name_mem = pat_res.data[0].get("name", "paciente")
                 enc_res = supabase.table("sana_encounter").select("id").eq("patient_id", patient_id).eq("status", "in-progress").execute()
                 if enc_res.data:
                     encounter_id = enc_res.data[0]["id"]
@@ -265,6 +296,8 @@ async def telegram_webhook(request: Request):
                         "category": "mensagem-paciente",
                         "value_string": text
                     }).execute()
+                # Salva no MemPalace para memória de longo prazo
+                salvar_mensagem_paciente(patient_id, patient_name_mem, text)
         except Exception as e:
             logger.warning(f"Nao salvou observacao: {e}")
 
@@ -274,11 +307,12 @@ async def telegram_webhook(request: Request):
             ai_response = llm_gemini.invoke(messages)
             resposta_texto = ai_response.content.strip()
 
-            # Salva resposta da IA no prontuário
+            # Salva resposta da IA no prontuário e no MemPalace
             try:
-                pat_res = supabase.table("sana_patient").select("id").eq("chat_id", chat_id).execute()
+                pat_res = supabase.table("sana_patient").select("id, name").eq("chat_id", chat_id).execute()
                 if pat_res.data:
                     patient_id = pat_res.data[0]["id"]
+                    patient_name_mem = pat_res.data[0].get("name", "paciente")
                     enc_res = supabase.table("sana_encounter").select("id").eq("patient_id", patient_id).eq("status", "in-progress").execute()
                     if enc_res.data:
                         supabase.table("sana_observation").insert({
@@ -286,6 +320,8 @@ async def telegram_webhook(request: Request):
                             "category": "resposta-agente",
                             "value_string": resposta_texto
                         }).execute()
+                    # Salva resposta no MemPalace para consistência futura
+                    salvar_resposta_agente(patient_id, patient_name_mem, resposta_texto)
             except Exception:
                 pass
 
