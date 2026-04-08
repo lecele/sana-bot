@@ -40,7 +40,7 @@ supabase: Client = create_client(SANA_SUPABASE_URL, SANA_SUPABASE_KEY)
 # Configuração Google Generative AI Nativo (Mais estável para Previews)
 genai.configure(api_key=GOOGLE_API_KEY)
 # Tentamos o 3.1 Live Preview que apareceu no ListModels
-MODEL_NAME = "gemini-3.1-flash-live-preview" 
+MODEL_NAME = "gemini-2.5-flash" 
 model_native = genai.GenerativeModel(MODEL_NAME)
 
 # =======================================================
