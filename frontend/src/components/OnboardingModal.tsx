@@ -58,8 +58,12 @@ export function OnboardingModal({ isOpen, onClose }: OnboardingModalProps) {
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md transition-all"
-      onClick={onClose}
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-md transition-all"
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onClose();
+      }}
     >
       <div 
         className="w-full sm:max-w-[480px] bg-white/95 backdrop-blur-2xl rounded-[32px] shadow-[0_35px_60px_-15px_rgba(0,0,0,0.4)] border border-white/60 overflow-hidden relative animate-in fade-in zoom-in-95 duration-300"
@@ -72,11 +76,16 @@ export function OnboardingModal({ isOpen, onClose }: OnboardingModalProps) {
 
         {/* Close Button */}
         <button 
-          onClick={onClose}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onClose();
+          }}
           type="button"
-          className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-800 hover:bg-slate-100 rounded-full transition-all z-50 backdrop-blur-md bg-white/50 cursor-pointer"
+          className="absolute top-6 right-6 p-2 text-slate-500 hover:text-slate-900 hover:bg-slate-200 rounded-full transition-all z-[100] backdrop-blur-md bg-white/80 cursor-pointer shadow-sm border border-slate-100"
+          title="Fechar"
         >
-            <X className="w-5 h-5"/>
+            <X className="w-5 h-5 pointer-events-none" />
         </button>
 
         {/* Header Section */}
