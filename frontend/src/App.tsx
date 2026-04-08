@@ -152,14 +152,12 @@ export default function App() {
       {/* SIDEBAR */}
       <aside className="w-72 bg-sky-100/60 text-slate-800 flex flex-col justify-between shadow-lg border-r border-sky-200/50 relative z-10 backdrop-blur-xl">
         <div>
-          <div className="p-6 flex items-center gap-4 border-b border-sky-200/60">
-            <div className="bg-white p-1.5 rounded-xl border border-sky-200 shadow-sm">
-              <img src={sanaLogo} alt="Sana" className="w-9 h-9 object-contain hue-rotate-[200deg] contrast-125 opacity-90" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">Sana</h1>
-              <p className="text-sky-600 text-[10px] font-extrabold uppercase tracking-widest">Pós Operatório</p>
-            </div>
+          <div className="pt-4 pb-2 px-6 flex justify-center border-b border-sky-200/60">
+            <img 
+              src={sanaLogo} 
+              alt="Sana Pós Operatório" 
+              className="w-36 h-auto object-contain" 
+            />
           </div>
 
           {/* Status do backend */}
