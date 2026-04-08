@@ -1,199 +1,192 @@
-# 🏥 Sana — Monitoramento Clínico Pós-Operatório com IA
+SANA — Monitoramento Clinico Pos-Operatorio com Inteligencia Artificial
+=======================================================================
 
-> Sistema SaaS de acompanhamento pós-operatório que integra **Inteligência Artificial** com **Telegram** para monitorar pacientes cirúrgicos de forma humanizada, 24 horas por dia.
+Sistema SaaS de acompanhamento pos-operatorio que integra Inteligencia Artificial com Telegram para monitorar pacientes cirurgicos de forma humanizada, 24 horas por dia.
 
----
 
-## 🔗 Links de Acesso
+LINKS DE ACESSO
+---------------
 
-| Serviço | URL |
-|---------|-----|
-| **Painel Clínico (Web)** | https://sana-clinico.vercel.app |
-| **Backend API** | http://129.121.33.171:8001 |
-| **Bot no Telegram** | https://t.me/app_sana_bot |
-| **Código Fonte** | https://github.com/lecele/sana-bot |
+Painel Clinico (Web):  https://sana-clinico.vercel.app
+Backend API:           http://129.121.33.171:8001
+Bot no Telegram:       https://t.me/app_sana_bot
+Codigo Fonte:          https://github.com/lecele/sana-bot
 
----
 
-## 🎯 O que é o Sana?
+O QUE E O SANA
+--------------
 
-O Sana resolve um problema real na medicina: após uma cirurgia, o paciente vai para casa e fica sem acompanhamento até a próxima consulta. Complicações como infecções e inflamações passam despercebidas — e podem virar emergências.
+O Sana resolve um problema real na medicina: apos uma cirurgia, o paciente vai para casa e fica sem acompanhamento ate a proxima consulta. Complicacoes como infeccoes e inflamacoes passam despercebidas e podem virar emergencias.
 
-O Sana coloca um **Agente Clínico de IA** disponível 24h no celular do paciente via Telegram. O paciente manda uma mensagem ou uma foto da ferida, e o agente avalia, tranquiliza e alerta a equipe médica se necessário.
+O Sana coloca um Agente Clinico de IA disponivel 24h no celular do paciente via Telegram. O paciente manda uma mensagem ou uma foto da ferida, e o agente avalia, tranquiliza e alerta a equipe medica se necessario.
 
-Benefícios principais:
-- O paciente usa o Telegram que já conhece — sem instalar nada novo
+Beneficios principais:
+- O paciente usa o Telegram que ja conhece, sem instalar nada novo
 - A IA analisa fotos de feridas e sintomas em segundos
-- O médico acompanha tudo pelo painel web
-- Funciona 24h por dia, sem intervenção humana
+- O medico acompanha tudo pelo painel web
+- Funciona 24h por dia, sem intervencao humana
 
----
 
-## 🏗️ Arquitetura do Sistema
+ARQUITETURA DO SISTEMA
+----------------------
 
-O sistema é composto por três camadas que se comunicam:
+O sistema e composto por tres camadas que se comunicam:
 
-**Painel Web (Frontend)** — o médico ou secretária cadastra o paciente e gera o link de convite.
+PAINEL WEB (Frontend): o medico ou secretaria cadastra o paciente e gera o link de convite.
 
-**Backend (API + IA)** — recebe as mensagens do Telegram, processa com Inteligência Artificial e persiste os dados no banco.
+BACKEND (API mais IA): recebe as mensagens do Telegram, processa com Inteligencia Artificial e persiste os dados no banco.
 
-**Telegram Bot** — interface do paciente. Simples, familiar e acessível por qualquer celular.
+TELEGRAM BOT: interface do paciente. Simples, familiar e acessivel por qualquer celular.
 
----
 
-## 🔄 Fluxo Completo
+FLUXO COMPLETO
+--------------
 
-### Etapa 1 — Cadastro do Paciente
+Etapa 1 - Cadastro do Paciente
 
-O médico ou secretária acessa o painel web em `sana-clinico.vercel.app`, clica em "Provisionar Paciente", preenche o nome e o tipo de cirurgia. O sistema cria automaticamente o prontuário no banco de dados e gera um link exclusivo para aquele paciente.
+O medico ou secretaria acessa o painel web, clica em "Provisionar Paciente", preenche o nome e o tipo de cirurgia. O sistema cria automaticamente o prontuario no banco de dados e gera um link exclusivo para aquele paciente.
 
-### Etapa 2 — Onboarding pelo Telegram
+Etapa 2 - Onboarding pelo Telegram
 
-O profissional envia o link gerado para o paciente (via WhatsApp, SMS ou e-mail). Quando o paciente clica no link, o Telegram abre automaticamente no chat com o bot. O bot recebe o código do paciente embutido no link, vincula o chat ao prontuário e envia uma mensagem de boas-vindas.
+O profissional envia o link gerado para o paciente via WhatsApp, SMS ou e-mail. Quando o paciente clica no link, o Telegram abre automaticamente no chat com o bot. O bot recebe o codigo do paciente embutido no link, vincula o chat ao prontuario e envia uma mensagem de boas-vindas.
 
-### Etapa 3 — Monitoramento Contínuo
+Etapa 3 - Monitoramento Continuo
 
-A partir deste momento, o paciente pode mandar mensagens ou fotos a qualquer hora. O agente responde de forma humanizada, analisa o que foi enviado e registra no prontuário.
+A partir deste momento, o paciente pode mandar mensagens ou fotos a qualquer hora. O agente responde de forma humanizada, analisa o que foi enviado e registra no prontuario.
 
----
 
-## 🤖 O Assistente de IA
+O ASSISTENTE DE IA
+------------------
 
-### Personalidade
+Personalidade
 
-O assistente foi configurado para se comportar como um profissional de saúde humano e empático. Ele nunca usa linguagem técnica desnecessária, nunca responde com formatações estranhas (asteriscos, colchetes, códigos) e sempre transmite calma e segurança ao paciente.
+O assistente foi configurado para se comportar como um profissional de saude humano e empatico. Ele nunca usa linguagem tecnica desnecessaria, nunca responde com formatacoes estranhas e sempre transmite calma e seguranca ao paciente.
 
-Regras principais do assistente:
+Regras do assistente:
 - Responde como um humano real, no estilo de uma conversa de WhatsApp
-- Nunca usa asteriscos, hashtags ou qualquer símbolo de programação
-- Sempre encaminha casos graves para a equipe médica
-- Mantém um tom acolhedor e reconfortante
+- Nunca usa asteriscos, hashtags ou qualquer simbolo de programacao
+- Sempre encaminha casos graves para a equipe medica
+- Mantem um tom acolhedor e reconfortante
 
-### Análise Visual de Feridas
+Analise Visual de Feridas
 
-Quando o paciente envia uma foto da ferida cirúrgica, o assistente aciona o modelo **Gemini 2.5 Flash** com capacidade de visão computacional. O modelo analisa a imagem e identifica sinais como avermelhamento, secreção, abertura das bordas e inflamação. A resposta é gerada em linguagem simples e humana, sem termos clínicos pesados.
+Quando o paciente envia uma foto da ferida cirurgica, o assistente aciona o modelo Gemini 2.5 Flash com capacidade de visao computacional. O modelo analisa a imagem e identifica sinais como avermelhamento, secrecao, abertura das bordas e inflamacao. A resposta e gerada em linguagem simples e humana.
 
-### Pipeline Interno de Agentes
+Pipeline Interno
 
-O sistema usa o framework LangGraph para orquestrar múltiplos agentes em sequência:
+O sistema usa o framework LangGraph para orquestrar multiplos agentes em sequencia. O agente principal recebe a mensagem e decide qual especialista acionar. Se a mensagem contem uma foto, aciona o agente de Triagem Visual que usa o Gemini para analisar a imagem. Em seguida, o agente FHIR Mapper estrutura os dados e salva no prontuario clinico. Por fim, a resposta e enviada de volta ao paciente pelo Telegram.
 
-O agente principal (Concierge) recebe a mensagem e decide qual especialista acionar. Se a mensagem contém uma foto, aciona o agente de Triagem Visual, que usa o Gemini com visão para analisar a imagem. Em seguida, o agente FHIR Mapper estrutura os dados e salva no prontuário clínico. Por fim, a resposta é enviada de volta ao paciente pelo Telegram.
 
----
+FRONTEND — PAINEL CLINICO
+--------------------------
 
-## 💻 Frontend — Painel Clínico
+O painel foi desenvolvido em React com TypeScript e Tailwind CSS, com design limpo e adequado ao ambiente de saude.
 
-O painel foi desenvolvido em React com TypeScript e Tailwind CSS, com um design "Clean Clinical Sky Blue" — limpo, moderno e adequado ao ambiente de saúde.
-
-Funcionalidades disponíveis:
-- Dashboard com cards de monitoramentos ativos, cicatrizações e triagens críticas
-- Busca de pacientes por nome ou código de prontuário
+Funcionalidades disponiveis:
+- Dashboard com cards de monitoramentos ativos, cicatrizacoes e triagens criticas
+- Busca de pacientes por nome ou codigo de prontuario
 - Modal de provisionamento de novos pacientes
-- Geração e compartilhamento do link de onboarding via Telegram
-- Interface responsiva para uso em desktop clínico
+- Geracao e compartilhamento do link de onboarding via Telegram
+- Interface responsiva para uso em desktop clinico
 
-Tecnologias utilizadas: React 18, TypeScript, Vite, Tailwind CSS v4, Lucide React.
+Tecnologias: React 18, TypeScript, Vite, Tailwind CSS v4, Lucide React.
 
----
 
-## ⚙️ Backend — API e Agentes de IA
+BACKEND — API E AGENTES DE IA
+------------------------------
 
-O backend é uma API assíncrona construída com FastAPI, que expõe três endpoints principais:
+O backend e uma API assincrona construida com FastAPI, com tres endpoints principais:
 
-O endpoint de health check confirma que o sistema está operacional. O endpoint de onboarding recebe os dados do novo paciente vindo do painel web, cria o registro no Supabase e retorna o ID do encontro para geração do link. O endpoint de webhook recebe todas as mensagens enviadas pelo paciente ao bot no Telegram, processa com a IA e envia a resposta de volta.
+Health check: confirma que o sistema esta operacional.
 
-Tecnologias utilizadas: Python 3.11, FastAPI, LangGraph, LangChain, Gemini 2.5 Flash, Supabase, httpx.
+Onboarding: recebe os dados do novo paciente vindo do painel web, cria o registro no Supabase e retorna o ID do encontro para geracao do link.
 
----
+Webhook Telegram: recebe todas as mensagens enviadas pelo paciente ao bot, processa com a IA e envia a resposta de volta.
 
-## 🗄️ Banco de Dados
+Tecnologias: Python 3.11, FastAPI, LangGraph, LangChain, Gemini 2.5 Flash, Supabase, httpx.
 
-O Sana usa o Supabase (PostgreSQL na nuvem) com três tabelas no schema público:
 
-A tabela de pacientes guarda nome e o ID de chat do Telegram, vinculado no momento do onboarding. A tabela de encontros registra cada período de acompanhamento, com status e tipo de cirurgia. A tabela de observações armazena cada avaliação feita pelo agente de IA durante o monitoramento.
+BANCO DE DADOS
+--------------
 
----
+O Sana usa o Supabase (PostgreSQL na nuvem) com tres tabelas:
 
-## 🚀 Infraestrutura e Deploy
+Tabela de pacientes: guarda nome e o ID de chat do Telegram, vinculado no momento do onboarding.
 
-O frontend está hospedado na Vercel com deploy automático a cada push no GitHub. O backend roda como um serviço permanente (systemd) em um servidor VPS Ubuntu 22.04 da Hostgator, na porta 8001. O webhook do Telegram aponta diretamente para o IP do servidor, garantindo que as mensagens dos pacientes sejam recebidas 24 horas por dia sem depender de nenhuma máquina local.
+Tabela de encontros: registra cada periodo de acompanhamento, com status e tipo de cirurgia.
 
-### Gerenciamento do Servidor
+Tabela de observacoes: armazena cada avaliacao feita pelo agente de IA durante o monitoramento.
 
-Para atualizar o backend após mudanças no código, acesse o servidor via SSH e execute:
 
-```bash
-cd /root/sana-bot && git pull && systemctl restart sana-bot
-```
+INFRAESTRUTURA E DEPLOY
+------------------------
 
-Para verificar se o serviço está ativo:
+Frontend:         Vercel com deploy automatico a cada push no GitHub
+Backend:          VPS Ubuntu 22.04 Hostgator, servico systemd permanente, porta 8001
+Banco de Dados:   Supabase cloud
+Bot Telegram:     Webhook apontando diretamente para o IP do servidor VPS
+Repositorio:      GitHub (lecele/sana-bot)
 
-```bash
-systemctl status sana-bot
-```
+Gerenciamento do Servidor
+
+Para atualizar o backend apos mudancas no codigo, acesse o servidor via SSH e execute:
+
+    cd /root/sana-bot && git pull && systemctl restart sana-bot
+
+Para verificar se o servico esta ativo:
+
+    systemctl status sana-bot
 
 Para ver os logs em tempo real:
 
-```bash
-journalctl -u sana-bot -f
-```
+    journalctl -u sana-bot -f
 
----
 
-## 🛠️ Como Rodar Localmente
+COMO RODAR LOCALMENTE
+----------------------
 
-### Backend
+Backend:
 
-```bash
-git clone https://github.com/lecele/sana-bot.git
-cd sana-bot/backend
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env
-uvicorn main:app --reload --port 8000
-```
+    git clone https://github.com/lecele/sana-bot.git
+    cd sana-bot/backend
+    python3 -m venv .venv
+    source .venv/bin/activate
+    pip install -r requirements.txt
+    cp .env.example .env
+    uvicorn main:app --reload --port 8000
 
-### Frontend
+Frontend:
 
-```bash
-cd sana-bot/frontend
-npm install
-npm run dev
-```
+    cd sana-bot/frontend
+    npm install
+    npm run dev
+    Acesse em http://localhost:5173
 
-Acesse em `http://localhost:5173`
 
----
+VARIAVEIS DE AMBIENTE
+----------------------
 
-## 🔑 Variáveis de Ambiente
+Copie o arquivo backend/.env.example para backend/.env e preencha:
 
-Copie o arquivo `backend/.env.example` para `backend/.env` e preencha com suas chaves:
+    SANA_SUPABASE_URL      URL do projeto no Supabase
+    SANA_SUPABASE_KEY      Chave anon do Supabase
+    GOOGLE_API_KEY         Chave da API do Google Gemini
+    TELEGRAM_BOT_TOKEN     Token do bot gerado pelo BotFather
 
-```
-SANA_SUPABASE_URL      → URL do projeto no Supabase
-SANA_SUPABASE_KEY      → Chave anon do Supabase
-GOOGLE_API_KEY         → Chave da API do Google Gemini
-TELEGRAM_BOT_TOKEN     → Token do bot gerado pelo BotFather
-```
 
----
+PROXIMAS FUNCIONALIDADES
+-------------------------
 
-## 🗺️ Próximas Funcionalidades
+- Persistir avaliacoes da IA no banco de dados por paciente
+- Painel do medico com historico completo de avaliacoes e fotos
+- Alertas automaticos por e-mail em casos de risco elevado
+- Lembretes de medicacao enviados automaticamente pelo bot
+- Geracao de relatorio PDF por paciente ao final do acompanhamento
+- Autenticacao de medicos e clinicas no painel
 
-- Persistir avaliações da IA no banco de dados por paciente
-- Painel do médico com histórico completo de avaliações e fotos
-- Alertas automáticos por e-mail em casos de risco elevado
-- Lembretes de medicação enviados automaticamente pelo bot
-- Geração de relatório PDF por paciente ao final do acompanhamento
-- Autenticação de médicos e clínicas no painel (multi-tenant)
 
----
+LICENCA
+-------
 
-## 📄 Licença
-
-Projeto proprietário — © 2026 Sana Clinical Monitoring. Todos os direitos reservados.
-
----
-
-*Desenvolvido para melhorar o cuidado pós-operatório e salvar vidas através da tecnologia.*
+Projeto proprietario. Todos os direitos reservados.
+Desenvolvido para melhorar o cuidado pos-operatorio e salvar vidas atraves da tecnologia.
