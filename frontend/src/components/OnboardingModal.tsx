@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { Copy, Plus, Send, CheckCircle2, X, Command, ActivitySquare } from "lucide-react";
+import { useState } from 'react';
+import * as Dialog from '@radix-ui/react-dialog';
+import { Copy, Send, CheckCircle2, X, Command, ActivitySquare } from "lucide-react";
 
 interface OnboardingModalProps {
   isOpen: boolean;
@@ -13,38 +14,25 @@ export function OnboardingModal({ isOpen, onClose }: OnboardingModalProps) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  if (!isOpen) return null;
-
   const handleGenerateLink = async () => {
     setIsGenerating(true);
     try {
-      // Chamada real para o Backend FastAPI
       const response = await fetch('/api/onboarding', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          patientName,
-          surgeryType
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ patientName, surgeryType })
       });
 
       if (!response.ok) {
-        throw new Error('Falha ao conectar no banco Supabase (sana_schema)');
+        throw new Error('Falha ao conectar no banco Supabase');
       }
 
       const data = await response.json();
-      
-      // Recebemos o UUID verdadeiro gravado no banco!
-      const realEncounterId = data.encounter_id;
-      
-      // Link puro focado no BOT DO TELEGRAM
-      const telegramLink = `https://t.me/app_sana_bot?start=${realEncounterId}`;
+      const telegramLink = `https://t.me/app_sana_bot?start=${data.encounter_id}`;
       setGeneratedLink(telegramLink);
     } catch (error) {
       console.error(error);
-      alert("Erro ao provisionar paciente. Verifique se o Backend (FastAPI) está rodando na porta 8000.");
+      alert("Erro ao provisionar paciente. Verifique se o Backend (FastAPI) está rodando.");
     } finally {
       setIsGenerating(false);
     }
@@ -56,123 +44,124 @@ export function OnboardingModal({ isOpen, onClose }: OnboardingModalProps) {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleClose = () => {
+    setGeneratedLink('');
+    setPatientName('');
+    setSurgeryType('');
+    onClose();
+  };
+
   return (
-    <div 
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/50 backdrop-blur-md transition-all p-4"
-      onClick={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        onClose();
-      }}
-    >
-      <div 
-        className="relative w-full max-w-[480px] max-h-[90vh] overflow-y-auto bg-white rounded-[32px] shadow-[0_35px_60px_-15px_rgba(0,0,0,0.4)] border border-slate-200"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Close Button — sempre visível no topo */}
-        <button 
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            onClose();
-          }}
-          type="button"
-          className="absolute top-4 right-4 p-2 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-full transition-all z-[100] bg-white cursor-pointer shadow-sm border border-slate-200"
-          title="Fechar"
+    <Dialog.Root open={isOpen} onOpenChange={(open) => { if (!open) handleClose(); }}>
+      <Dialog.Portal>
+        {/* Overlay escuro */}
+        <Dialog.Overlay className="fixed inset-0 z-[9998] bg-slate-900/50 backdrop-blur-md" />
+
+        {/* Conteúdo do modal */}
+        <Dialog.Content
+          className="fixed left-1/2 top-1/2 z-[9999] w-full max-w-[480px] max-h-[90vh] -translate-x-1/2 -translate-y-1/2 overflow-y-auto bg-white rounded-[28px] shadow-2xl border border-slate-200 p-0 focus:outline-none"
+          onEscapeKeyDown={handleClose}
         >
-            <X className="w-5 h-5 pointer-events-none" />
-        </button>
-
-        {/* Header Section */}
-        <div className="p-10 pb-6 relative z-10">
-          <div className="w-14 h-14 bg-gradient-to-br from-sky-400 to-blue-500 rounded-2xl shadow-lg shadow-sky-500/20 flex items-center justify-center mb-6">
-             <ActivitySquare className="text-white w-7 h-7" />
+          {/* Header */}
+          <div className="p-10 pb-6">
+            <div className="w-14 h-14 bg-gradient-to-br from-sky-400 to-blue-500 rounded-2xl shadow-lg shadow-sky-500/20 flex items-center justify-center mb-6">
+              <ActivitySquare className="text-white w-7 h-7" />
+            </div>
+            <Dialog.Title className="text-3xl font-extrabold tracking-tight text-slate-900">
+              Nova Ficha Clínica
+            </Dialog.Title>
+            <Dialog.Description className="text-slate-500 mt-2 text-sm leading-relaxed pr-6 font-medium">
+              Crie um vínculo de monitoramento inteligente para o sistema acompanhar o paciente via Telegram.
+            </Dialog.Description>
           </div>
-          <h2 className="text-3xl font-extrabold tracking-tight text-slate-900">
-            Nova Ficha Clínica
-          </h2>
-          <p className="text-slate-500 mt-2 text-sm leading-relaxed pr-6 font-medium">
-            Crie um vínculo de monitoramento inteligente para o sistema acompanhar o paciente via Telegram.
-          </p>
-        </div>
 
-        {/* Form Inputs */}
-        <div className="px-10 py-2 space-y-6 relative z-10">
-          <div className="space-y-2.5 text-left group">
-            <label htmlFor="name" className="text-[11px] font-bold uppercase tracking-widest text-slate-400 group-focus-within:text-sky-600 transition-colors">
-              Nome do Paciente
-            </label>
-            <input 
-              id="name" 
-              placeholder="Ex: Clara Albuquerque" 
-              className="w-full h-14 px-5 border-2 rounded-2xl border-slate-200/70 bg-slate-50/50 hover:bg-white focus:bg-white focus:outline-none focus:ring-4 focus:ring-sky-500/10 focus:border-sky-500 transition-all font-semibold text-slate-800 placeholder-slate-300 shadow-sm" 
-              value={patientName}
-              onChange={(e) => setPatientName(e.target.value)}
-            />
-          </div>
-          <div className="space-y-2.5 text-left group">
-            <label htmlFor="surgery" className="text-[11px] font-bold uppercase tracking-widest text-slate-400 group-focus-within:text-sky-600 transition-colors">
-              Procedimento Cirúrgico
-            </label>
-            <input 
-              id="surgery" 
-              placeholder="Ex: Artroscopia de Joelho" 
-              className="w-full h-14 px-5 border-2 rounded-2xl border-slate-200/70 bg-slate-50/50 hover:bg-white focus:bg-white focus:outline-none focus:ring-4 focus:ring-sky-500/10 focus:border-sky-500 transition-all font-semibold text-slate-800 placeholder-slate-300 shadow-sm"
-              value={surgeryType}
-              onChange={(e) => setSurgeryType(e.target.value)}
-            />
-          </div>
-        </div>
-
-        {/* Action Area */}
-        <div className="p-10 pt-8 relative z-10">
-          {generatedLink ? (
-            <div className="flex flex-col gap-4 p-6 rounded-3xl bg-sky-50 border border-sky-100 shadow-inner animate-in fade-in slide-in-from-bottom-2">
-              <label className="text-sm font-extrabold text-slate-800 flex items-center gap-2 mb-1">
-                <CheckCircle2 className="w-5 h-5 text-sky-500" /> Deep Link Configurado!
+          {/* Formulário */}
+          <div className="px-10 py-2 space-y-6">
+            <div className="space-y-2.5 text-left">
+              <label htmlFor="name" className="text-[11px] font-bold uppercase tracking-widest text-slate-400">
+                Nome do Paciente
               </label>
-              
-              <div className="flex gap-2 relative group cursor-pointer" onClick={copyToClipboard}>
-                <div 
-                  className="flex-1 px-4 py-3.5 rounded-xl bg-white border border-slate-200/80 text-sky-800 font-bold font-mono text-xs shadow-sm truncate" 
-                >
-                  {generatedLink}
+              <input
+                id="name"
+                placeholder="Ex: Clara Albuquerque"
+                className="w-full h-14 px-5 border-2 rounded-2xl border-slate-200 bg-slate-50 hover:bg-white focus:bg-white focus:outline-none focus:ring-4 focus:ring-sky-500/10 focus:border-sky-500 transition-all font-semibold text-slate-800 placeholder-slate-300"
+                value={patientName}
+                onChange={(e) => setPatientName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2.5 text-left">
+              <label htmlFor="surgery" className="text-[11px] font-bold uppercase tracking-widest text-slate-400">
+                Procedimento Cirúrgico
+              </label>
+              <input
+                id="surgery"
+                placeholder="Ex: Artroscopia de Joelho"
+                className="w-full h-14 px-5 border-2 rounded-2xl border-slate-200 bg-slate-50 hover:bg-white focus:bg-white focus:outline-none focus:ring-4 focus:ring-sky-500/10 focus:border-sky-500 transition-all font-semibold text-slate-800 placeholder-slate-300"
+                value={surgeryType}
+                onChange={(e) => setSurgeryType(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* Ação */}
+          <div className="p-10 pt-8">
+            {generatedLink ? (
+              <div className="flex flex-col gap-4 p-6 rounded-3xl bg-sky-50 border border-sky-100">
+                <label className="text-sm font-extrabold text-slate-800 flex items-center gap-2">
+                  <CheckCircle2 className="w-5 h-5 text-sky-500" /> Deep Link Configurado!
+                </label>
+                <div className="flex gap-2 relative cursor-pointer" onClick={copyToClipboard}>
+                  <div className="flex-1 px-4 py-3.5 rounded-xl bg-white border border-slate-200 text-sky-800 font-bold font-mono text-xs truncate">
+                    {generatedLink}
+                  </div>
+                  <button
+                    type="button"
+                    className={`absolute right-1.5 top-1.5 bottom-1.5 px-4 rounded-lg font-bold text-sm transition-all flex items-center gap-2 ${copied ? 'bg-sky-500 text-white' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}
+                  >
+                    {copied ? <><CheckCircle2 className="w-4 h-4" /> Copiado</> : <><Copy className="w-4 h-4" /> Copiar</>}
+                  </button>
                 </div>
-                <button 
-                  className={`absolute right-1.5 top-1.5 bottom-1.5 px-4 rounded-lg font-bold text-sm transition-all flex items-center gap-2 ${copied ? 'bg-sky-500 text-white shadow-md' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}
+                <button
+                  type="button"
+                  className="w-full mt-3 bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-xl shadow-blue-600/20 transition-all hover:-translate-y-0.5 flex items-center justify-center gap-2 rounded-2xl h-14"
+                  onClick={() => window.open(`https://t.me/share/url?url=${encodeURIComponent(generatedLink)}&text=${encodeURIComponent(`[Clínica] Oi ${patientName}, faça o start do seu acompanhamento inteligente clicando aqui.`)}`, '_blank')}
                 >
-                  {copied ? <><CheckCircle2 className="w-4 h-4" /> Copiado</> : <><Copy className="w-4 h-4" /> Copiar</>}
+                  <Send className="w-4 h-4" />
+                  <span>Encaminhar Convite pelo Telegram</span>
                 </button>
               </div>
-              
-              <button 
-                className="w-full mt-3 bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-xl shadow-blue-600/20 transition-all hover:-translate-y-0.5 flex flex-col items-center justify-center gap-1 rounded-2xl h-14"
-                onClick={() => window.open(`https://t.me/share/url?url=${encodeURIComponent(generatedLink)}&text=${encodeURIComponent(`[Clínica] Oi ${patientName}, faça o start do seu acompanhamento inteligente clicando aqui.`)}`, '_blank')}
-              >
-                <div className="flex items-center gap-2 text-[15px]">
-                  <Send className="w-4 h-4" /> 
-                  <span>Encaminhar Convite pelo Telegram</span>
-                </div>
-              </button>
-            </div>
-          ) : (
-             <button 
-                onClick={handleGenerateLink} 
+            ) : (
+              <button
+                type="button"
+                onClick={handleGenerateLink}
                 disabled={!patientName || !surgeryType || isGenerating}
-                className="w-full h-16 bg-sky-600 hover:bg-sky-500 disabled:opacity-50 disabled:grayscale text-white font-extrabold shadow-xl shadow-sky-600/20 transition-all hover:-translate-y-0.5 hover:shadow-sky-500/40 rounded-2xl flex items-center justify-center text-base tracking-wide"
+                className="w-full h-16 bg-sky-600 hover:bg-sky-500 disabled:opacity-50 disabled:grayscale text-white font-extrabold shadow-xl shadow-sky-600/20 transition-all hover:-translate-y-0.5 rounded-2xl flex items-center justify-center text-base"
               >
                 {isGenerating ? (
                   <div className="flex items-center gap-3">
-                    <div className="w-5 h-5 border-[3px] border-white/30 border-t-white rounded-full animate-spin"/> 
+                    <div className="w-5 h-5 border-[3px] border-white/30 border-t-white rounded-full animate-spin" />
                     Conectando Agente LLM...
                   </div>
                 ) : (
                   <><Command className="w-5 h-5 mr-3" /> Gerar Sessão Criptografada</>
                 )}
               </button>
-          )}
-        </div>
-      </div>
-    </div>
+            )}
+          </div>
+
+          {/* Botão fechar — nativo do Radix */}
+          <Dialog.Close asChild>
+            <button
+              type="button"
+              className="absolute top-4 right-4 p-2 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-full transition-all bg-white border border-slate-200 shadow-sm cursor-pointer"
+              title="Fechar"
+              aria-label="Fechar modal"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </Dialog.Close>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }
