@@ -1,6 +1,5 @@
 {
   "version": 2,
-  "name": "sana-bot",
   "builds": [
     {
       "src": "frontend/package.json",
@@ -9,6 +8,10 @@
     }
   ],
   "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "http://129.121.33.171:8001/api/$1"
+    },
     {
       "src": "/(.*)",
       "dest": "/frontend/$1"
