@@ -267,25 +267,36 @@ async def telegram_webhook(request: Request):
                 content_blocks.append({"type": "image_url", "image_url": img_url})
                 content_blocks.append({"type": "text", "text": text or "Analise essa foto do meu pos-operatorio"})
 
-                # Tenta buscar encounter_id pelo chat_id para salvar a observação
-                pat_res = supabase.table("sana_patient").select("id, name").eq("chat_id", chat_id).execute()
-                if pat_res.data:
-                    patient_id = pat_res.data[0]["id"]
-                    patient_name_mem = pat_res.data[0].get("name", "paciente")
-                    enc_res = supabase.table("sana_encounter").select("id").eq("patient_id", patient_id).eq("status", "in-progress").execute()
-                    if enc_res.data:
-                        encounter_id_foto = enc_res.data[0]["id"]
-                        supabase.table("sana_observation").insert({
-                            "encounter_id": encounter_id_foto,
-                            "category": "foto-ferida",
-                            "value_string": text or "Paciente enviou foto para análise via Telegram.",
-                            "media_url": img_url
-                        }).execute()
-                        logger.info(f"Foto salva para paciente {patient_id}, encounter {encounter_id_foto}")
-                    # Salva no MemPalace
-                    salvar_analise_ferida(patient_id, patient_name_mem, img_url, legenda=text)
+                # Busca encounter ativo diretamente pelo chat_id via join
+                enc_foto_res = supabase.table("sana_encounter").select(
+                    "id, patient_id, sana_patient(id, name, chat_id)"
+                ).eq("status", "in-progress").execute()
+
+                encounter_id_foto = None
+                patient_id_foto = None
+                patient_name_mem_foto = "paciente"
+
+                if enc_foto_res.data:
+                    for enc in enc_foto_res.data:
+                        pat = enc.get("sana_patient") or {}
+                        if str(pat.get("chat_id", "")) == str(chat_id):
+                            encounter_id_foto = enc["id"]
+                            patient_id_foto = enc["patient_id"]
+                            patient_name_mem_foto = pat.get("name", "paciente")
+                            break
+
+                if encounter_id_foto:
+                    supabase.table("sana_observation").insert({
+                        "encounter_id": encounter_id_foto,
+                        "category": "foto-ferida",
+                        "value_string": text or "Paciente enviou foto para análise via Telegram.",
+                        "media_url": img_url
+                    }).execute()
+                    logger.info(f"Foto salva! encounter={encounter_id_foto} paciente={patient_name_mem_foto}")
+                    if patient_id_foto:
+                        salvar_analise_ferida(patient_id_foto, patient_name_mem_foto, img_url, legenda=text)
                 else:
-                    logger.warning(f"Paciente com chat_id={chat_id} não encontrado para salvar foto.")
+                    logger.warning(f"Nenhum encounter ativo encontrado para chat_id={chat_id}")
         except Exception as e:
             logger.error(f"Erro ao processar foto: {e}")
             content_blocks.append({"type": "text", "text": "O paciente enviou uma foto mas houve erro tecnico. Peca desculpas e peca para reenviar."})
