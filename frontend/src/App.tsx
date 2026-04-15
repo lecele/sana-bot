@@ -2,9 +2,10 @@ import { useState, useEffect, useCallback } from 'react'
 import { OnboardingModal } from './components/OnboardingModal'
 import sanaLogo from './assets/sana_logo.png'
 import {
-  LayoutDashboard, Users, Activity, Settings, Bell, Search,
+  LayoutDashboard, Users, Activity, Settings,Search,
   PlusCircle, TrendingUp, AlertCircle, CheckCircle2, RefreshCw,
-  MessageSquare, Camera, Clock, Wifi, WifiOff, ChevronRight
+  MessageSquare, Camera, Clock, Wifi, WifiOff, ChevronRight,
+  ChevronDown, ChevronUp, Bell
 } from 'lucide-react'
 
 const API_URL = ''
@@ -36,6 +37,7 @@ interface Observation {
   category: string
   value_string: string
   media_url?: string
+  reviewed_at?: string | null
   created_at: string
   encounter_id: string
   sana_encounter?: {
@@ -75,6 +77,29 @@ function categoryColor(cat: string) {
   return 'bg-slate-100 text-slate-600'
 }
 
+// Agrupa observações por encounter_id
+function groupByEncounter(obs: Observation[]) {
+  const map = new Map<string, Observation[]>()
+  for (const o of obs) {
+    const key = o.encounter_id || 'unknown'
+    if (!map.has(key)) map.set(key, [])
+    map.get(key)!.push(o)
+  }
+  // ordena por item mais recente dentro de cada grupo
+  const groups: { encounterId: string; items: Observation[] }[] = []
+  map.forEach((items, encounterId) => {
+    groups.push({
+      encounterId,
+      items: items.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+    })
+  })
+  // ordena grupos por item mais recente de cada grupo
+  return groups.sort((a, b) =>
+    new Date(b.items[b.items.length-1].created_at).getTime() -
+    new Date(a.items[a.items.length-1].created_at).getTime()
+  )
+}
+
 // ─── Componente principal ─────────────────────────────────────────────────────
 export default function App() {
   const [view, setView] = useState<View>('dashboard')
@@ -86,6 +111,7 @@ export default function App() {
   const [loading, setLoading] = useState(true)
   const [backendOnline, setBackendOnline] = useState(false)
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date())
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
 
   // ─── Fetch ────────────────────────────────────────────────────────────────
   const fetchStats = useCallback(async () => {
@@ -140,11 +166,31 @@ export default function App() {
     return () => clearTimeout(t)
   }, [search, fetchPatients])
 
-  // Refresh quando onboarding fechar com sucesso
   const handleModalClose = () => {
     setModalOpen(false)
     setTimeout(refreshAll, 500)
   }
+
+  // Marcar observação como revisada
+  const markReviewed = async (obsId: string) => {
+    try {
+      await fetch(`${API_URL}/api/observations/${obsId}/review`, { method: 'PATCH' })
+      await fetchObservations()
+    } catch (e) { console.error(e) }
+  }
+
+  const toggleGroup = (id: string) => {
+    setExpandedGroups(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  // Contagem de fotos pendentes de revisão
+  const pendingPhotos = observations.filter(o => o.category === 'foto-ferida' && !o.reviewed_at)
+  const groupedObs = groupByEncounter(observations)
 
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
@@ -154,11 +200,7 @@ export default function App() {
       <aside className="w-72 bg-sky-100/60 text-slate-800 flex flex-col justify-between shadow-lg border-r border-sky-200/50 relative z-10 backdrop-blur-xl">
         <div>
           <div className="pt-4 pb-2 px-6 flex justify-center border-b border-sky-200/60">
-            <img 
-              src={sanaLogo} 
-              alt="Sana Pós Operatório" 
-              className="w-36 h-auto object-contain" 
-            />
+            <img src={sanaLogo} alt="Sana Pós Operatório" className="w-36 h-auto object-contain" />
           </div>
 
           {/* Status do backend */}
@@ -193,11 +235,18 @@ export default function App() {
             >
               <Activity size={20} strokeWidth={2.5} />
               Avaliações IA
-              {observations.length > 0 && (
-                <span className="ml-auto bg-green-100 text-green-700 rounded-full px-2 py-0.5 text-xs font-black">
-                  {observations.length}
-                </span>
-              )}
+              <span className="ml-auto flex items-center gap-1">
+                {pendingPhotos.length > 0 && (
+                  <span className="flex items-center gap-1 bg-red-500 text-white rounded-full px-2 py-0.5 text-xs font-black animate-pulse">
+                    <Bell size={10} /> {pendingPhotos.length}
+                  </span>
+                )}
+                {observations.length > 0 && pendingPhotos.length === 0 && (
+                  <span className="bg-green-100 text-green-700 rounded-full px-2 py-0.5 text-xs font-black">
+                    {observations.length}
+                  </span>
+                )}
+              </span>
             </button>
           </nav>
         </div>
@@ -233,6 +282,15 @@ export default function App() {
             />
           </div>
           <div className="flex items-center gap-4">
+            {pendingPhotos.length > 0 && (
+              <button
+                onClick={() => { setView('observations'); fetchObservations() }}
+                className="flex items-center gap-2 bg-red-50 text-red-600 border border-red-100 px-4 py-2 rounded-xl font-bold text-sm hover:bg-red-100 transition-all animate-pulse"
+              >
+                <Bell size={16} />
+                {pendingPhotos.length} foto{pendingPhotos.length > 1 ? 's' : ''} pendente{pendingPhotos.length > 1 ? 's' : ''}
+              </button>
+            )}
             <button
               onClick={refreshAll}
               className={`p-2 rounded-xl text-slate-400 hover:text-sky-600 hover:bg-sky-50 transition-all ${loading ? 'animate-spin text-sky-500' : ''}`}
@@ -262,9 +320,8 @@ export default function App() {
               </button>
             </div>
 
-            {/* STATS CARDS — dados reais */}
+            {/* STATS CARDS */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Card 1 — Monitoramentos Ativos */}
               <div className="bg-white p-7 rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.02)] border border-slate-200/50 hover:border-sky-200 hover:shadow-xl hover:shadow-sky-900/5 transition-all group relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-24 h-24 bg-sky-50/50 rounded-bl-[100px] -z-0 transition-transform duration-500 group-hover:scale-125" />
                 <div className="flex justify-between items-start relative z-10">
@@ -284,7 +341,6 @@ export default function App() {
                 </p>
               </div>
 
-              {/* Card 2 — Pacientes Conectados */}
               <div className="bg-white p-7 rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.02)] border border-slate-200/50 hover:border-blue-200 hover:shadow-xl hover:shadow-blue-900/5 transition-all group relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-24 h-24 bg-blue-50/50 rounded-bl-[100px] -z-0 transition-transform duration-500 group-hover:scale-125" />
                 <div className="flex justify-between items-start relative z-10">
@@ -303,27 +359,32 @@ export default function App() {
                 </p>
               </div>
 
-              {/* Card 3 — Avaliações por IA */}
-              <div className="bg-white p-7 rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.02)] border border-slate-200/50 hover:border-orange-200 hover:shadow-xl hover:shadow-orange-900/5 transition-all group relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-24 h-24 bg-orange-50/50 rounded-bl-[100px] -z-0 transition-transform duration-500 group-hover:scale-125" />
+              <div
+                className={`bg-white p-7 rounded-[24px] shadow-[0_8px_30px_rgb(0,0,0,0.02)] border transition-all group relative overflow-hidden cursor-pointer ${pendingPhotos.length > 0 ? 'border-red-200 hover:shadow-xl hover:shadow-red-900/5' : 'border-slate-200/50 hover:border-orange-200 hover:shadow-xl hover:shadow-orange-900/5'}`}
+                onClick={() => { setView('observations'); fetchObservations() }}
+              >
+                <div className={`absolute top-0 right-0 w-24 h-24 rounded-bl-[100px] -z-0 transition-transform duration-500 group-hover:scale-125 ${pendingPhotos.length > 0 ? 'bg-red-50/50' : 'bg-orange-50/50'}`} />
                 <div className="flex justify-between items-start relative z-10">
                   <div>
                     <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">Avaliações Registradas</p>
-                    <h3 className="text-5xl font-black text-orange-500 mt-3 tracking-tighter">
+                    <h3 className={`text-5xl font-black mt-3 tracking-tighter ${pendingPhotos.length > 0 ? 'text-red-500' : 'text-orange-500'}`}>
                       {loading ? <span className="text-3xl text-slate-300 animate-pulse">···</span> : observations.length}
                     </h3>
                   </div>
-                  <div className="p-4 bg-orange-50 text-orange-600 rounded-2xl shadow-sm border border-orange-100/50">
+                  <div className={`p-4 rounded-2xl shadow-sm border ${pendingPhotos.length > 0 ? 'bg-red-50 text-red-600 border-red-100/50' : 'bg-orange-50 text-orange-600 border-orange-100/50'}`}>
                     <AlertCircle size={26} strokeWidth={2.5} />
                   </div>
                 </div>
-                <p className="text-orange-600 text-[13px] font-bold mt-5 relative z-10 bg-orange-50 inline-block px-3 py-1.5 rounded-lg border border-orange-100 text-center w-full">
-                  {observations.filter(o => o.category === 'foto-ferida').length} fotos analisadas pela IA
+                <p className={`text-[13px] font-bold mt-5 relative z-10 inline-block px-3 py-1.5 rounded-lg border text-center w-full ${pendingPhotos.length > 0 ? 'text-red-600 bg-red-50 border-red-100 animate-pulse' : 'text-orange-600 bg-orange-50 border-orange-100'}`}>
+                  {pendingPhotos.length > 0
+                    ? `⚠ ${pendingPhotos.length} foto${pendingPhotos.length > 1 ? 's' : ''} aguardando revisão`
+                    : `${observations.filter(o => o.category === 'foto-ferida').length} fotos analisadas pela IA`
+                  }
                 </p>
               </div>
             </div>
 
-            {/* LISTA RÁPIDA — últimos pacientes */}
+            {/* LISTA RÁPIDA */}
             <div className="bg-white rounded-[24px] border border-slate-200/50 shadow-[0_8px_30px_rgb(0,0,0,0.02)] overflow-hidden">
               <div className="px-7 py-5 border-b border-slate-100 flex justify-between items-center">
                 <h3 className="font-extrabold text-slate-900">Pacientes Recentes</h3>
@@ -332,9 +393,7 @@ export default function App() {
                 </button>
               </div>
               {patients.length === 0 ? (
-                <div className="p-10 text-center text-slate-400 font-medium">
-                  Nenhum paciente cadastrado ainda.
-                </div>
+                <div className="p-10 text-center text-slate-400 font-medium">Nenhum paciente cadastrado ainda.</div>
               ) : (
                 <div className="divide-y divide-slate-50">
                   {patients.slice(0, 5).map(p => (
@@ -394,6 +453,9 @@ export default function App() {
               <div className="grid gap-4">
                 {patients.map(p => {
                   const enc = p.sana_encounter?.[0]
+                  // observações deste paciente
+                  const patObs = observations.filter(o => o.sana_encounter?.patient_id === p.id)
+                  const patPendingPhotos = patObs.filter(o => o.category === 'foto-ferida' && !o.reviewed_at)
                   return (
                     <div key={p.id} className="bg-white rounded-[20px] border border-slate-200/50 shadow-sm hover:shadow-md hover:border-sky-200 transition-all p-6 flex items-center gap-5">
                       <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-sky-400 to-blue-500 flex items-center justify-center text-white font-black text-xl shrink-0">
@@ -407,6 +469,11 @@ export default function App() {
                         </p>
                       </div>
                       <div className="flex flex-col items-end gap-2 shrink-0">
+                        {patPendingPhotos.length > 0 && (
+                          <span className="flex items-center gap-1 text-xs font-bold text-red-600 bg-red-50 px-3 py-1.5 rounded-full border border-red-100 animate-pulse">
+                            <Bell size={11} /> {patPendingPhotos.length} foto pendente
+                          </span>
+                        )}
                         {p.chat_id ? (
                           <span className="flex items-center gap-1.5 text-xs font-bold text-green-700 bg-green-50 px-3 py-1.5 rounded-full border border-green-100">
                             <Wifi size={12} /> Bot Conectado
@@ -428,58 +495,141 @@ export default function App() {
           </div>
         )}
 
+        {/* ── AVALIAÇÕES IA — AGRUPADAS POR PACIENTE ── */}
         {view === 'observations' && (
           <div className="p-8 w-full space-y-6">
-            <div>
-              <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">Avaliações IA</h2>
-              <p className="text-slate-500 mt-1 font-medium">{observations.length} registro{observations.length !== 1 ? 's' : ''} no prontuário</p>
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">Avaliações IA</h2>
+                <p className="text-slate-500 mt-1 font-medium">
+                  {groupedObs.length} paciente{groupedObs.length !== 1 ? 's' : ''} com registro
+                  {pendingPhotos.length > 0 && (
+                    <span className="ml-2 text-red-500 font-bold">· {pendingPhotos.length} foto{pendingPhotos.length > 1 ? 's' : ''} aguardando revisão</span>
+                  )}
+                </p>
+              </div>
             </div>
 
-            {observations.length === 0 ? (
+            {groupedObs.length === 0 ? (
               <div className="bg-white rounded-[24px] border border-slate-200/50 p-16 text-center">
                 <Activity size={48} className="mx-auto text-slate-200 mb-4" />
                 <p className="text-slate-400 font-medium">Nenhuma avaliação registrada ainda.</p>
                 <p className="text-slate-400 text-sm mt-1">Aguardando interações dos pacientes pelo Telegram.</p>
               </div>
             ) : (
-              <div className="space-y-3">
-                {observations.map(obs => {
-                  const patientName = obs.sana_encounter?.sana_patient?.name || 'Paciente desconhecido'
-                  const surgery = obs.sana_encounter?.reason_reference || ''
+              <div className="space-y-4">
+                {groupedObs.map(group => {
+                  const firstObs = group.items[0]
+                  const patientName = firstObs.sana_encounter?.sana_patient?.name || 'Paciente desconhecido'
+                  const surgery = firstObs.sana_encounter?.reason_reference || ''
+                  const hasPendingPhoto = group.items.some(o => o.category === 'foto-ferida' && !o.reviewed_at)
+                  const photoItems = group.items.filter(o => o.category === 'foto-ferida')
+                  const isExpanded = expandedGroups.has(group.encounterId)
+                  const lastItem = group.items[group.items.length - 1]
+
                   return (
-                    <div key={obs.id} className="bg-white rounded-[20px] border border-slate-200/50 shadow-sm hover:shadow-md transition-all p-5 flex gap-4">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${obs.category === 'foto-ferida' ? 'bg-purple-100' : obs.category === 'resposta-agente' ? 'bg-green-100' : 'bg-sky-100'}`}>
-                        {obs.category === 'foto-ferida' ? <Camera size={18} className="text-purple-600" /> :
-                         obs.category === 'resposta-agente' ? <Activity size={18} className="text-green-600" /> :
-                         <MessageSquare size={18} className="text-sky-600" />}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-extrabold text-slate-900">{patientName}</span>
-                          {surgery && <span className="text-xs text-slate-400 font-medium">· {surgery}</span>}
-                          <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${categoryColor(obs.category)}`}>
-                            {categoryLabel(obs.category)}
-                          </span>
+                    <div
+                      key={group.encounterId}
+                      className={`bg-white rounded-[20px] border shadow-sm transition-all overflow-hidden ${hasPendingPhoto ? 'border-red-200 shadow-red-50' : 'border-slate-200/50'}`}
+                    >
+                      {/* Header do card — clicável para expandir */}
+                      <button
+                        onClick={() => toggleGroup(group.encounterId)}
+                        className="w-full p-5 flex items-center gap-4 text-left hover:bg-slate-50/50 transition-colors"
+                      >
+                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white font-black text-lg shrink-0 ${hasPendingPhoto ? 'bg-gradient-to-br from-red-400 to-red-500' : 'bg-gradient-to-br from-sky-400 to-blue-500'}`}>
+                          {patientName.charAt(0).toUpperCase()}
                         </div>
-                        {/* Exibe foto se for categoria foto-ferida */}
-                        {obs.category === 'foto-ferida' && obs.media_url ? (
-                          <a href={obs.media_url} target="_blank" rel="noopener noreferrer" className="block mt-2">
-                            <img
-                              src={obs.media_url}
-                              alt="Foto da ferida"
-                              className="w-full max-w-sm rounded-2xl border border-purple-100 shadow-sm hover:opacity-90 transition-opacity object-cover max-h-64"
-                            />
-                            {obs.value_string && (
-                              <p className="text-sm text-slate-600 mt-2 leading-relaxed italic">"{obs.value_string}"</p>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-extrabold text-slate-900 text-base">{patientName}</span>
+                            {surgery && <span className="text-xs text-slate-400 font-medium">· {surgery}</span>}
+                            {hasPendingPhoto && (
+                              <span className="flex items-center gap-1 text-xs font-bold text-red-600 bg-red-50 px-2.5 py-1 rounded-full border border-red-100 animate-pulse">
+                                <Bell size={10} /> Revisão Pendente
+                              </span>
                             )}
-                          </a>
-                        ) : (
-                          <p className="text-sm text-slate-600 mt-1.5 leading-relaxed line-clamp-3">{obs.value_string}</p>
-                        )}
-                        <p className="text-xs text-slate-400 mt-2 flex items-center gap-1">
-                          <Clock size={11} /> {timeAgo(obs.created_at)}
-                        </p>
-                      </div>
+                            {!hasPendingPhoto && photoItems.length > 0 && (
+                              <span className="flex items-center gap-1 text-xs font-bold text-green-700 bg-green-50 px-2.5 py-1 rounded-full border border-green-100">
+                                <CheckCircle2 size={10} /> Revisado
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-slate-400 mt-1">
+                            {group.items.length} registro{group.items.length !== 1 ? 's' : ''}
+                            {photoItems.length > 0 && ` · ${photoItems.length} foto${photoItems.length !== 1 ? 's' : ''}`}
+                            {` · última atividade ${timeAgo(lastItem.created_at)}`}
+                          </p>
+                        </div>
+                        <div className="shrink-0 text-slate-400">
+                          {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                        </div>
+                      </button>
+
+                      {/* Timeline da conversa — só quando expandido */}
+                      {isExpanded && (
+                        <div className="border-t border-slate-100 px-5 pb-5 pt-4 space-y-4">
+                          {group.items.map((obs, idx) => (
+                            <div key={obs.id} className="flex gap-3">
+                              {/* Linha timeline */}
+                              <div className="flex flex-col items-center">
+                                <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${obs.category === 'foto-ferida' ? 'bg-purple-100' : obs.category === 'resposta-agente' ? 'bg-green-100' : 'bg-sky-100'}`}>
+                                  {obs.category === 'foto-ferida' ? <Camera size={14} className="text-purple-600" /> :
+                                   obs.category === 'resposta-agente' ? <Activity size={14} className="text-green-600" /> :
+                                   <MessageSquare size={14} className="text-sky-600" />}
+                                </div>
+                                {idx < group.items.length - 1 && (
+                                  <div className="w-0.5 h-full bg-slate-100 mt-1 min-h-[16px]" />
+                                )}
+                              </div>
+
+                              {/* Conteúdo */}
+                              <div className="flex-1 min-w-0 pb-2">
+                                <div className="flex items-center gap-2 mb-1.5">
+                                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${categoryColor(obs.category)}`}>
+                                    {categoryLabel(obs.category)}
+                                  </span>
+                                  <span className="text-xs text-slate-400 flex items-center gap-1">
+                                    <Clock size={10} /> {timeAgo(obs.created_at)}
+                                  </span>
+                                  {obs.category === 'foto-ferida' && obs.reviewed_at && (
+                                    <span className="text-xs text-green-600 font-bold flex items-center gap-1">
+                                      <CheckCircle2 size={10} /> Revisado
+                                    </span>
+                                  )}
+                                </div>
+
+                                {obs.category === 'foto-ferida' && obs.media_url ? (
+                                  <div>
+                                    <a href={obs.media_url} target="_blank" rel="noopener noreferrer">
+                                      <img
+                                        src={obs.media_url}
+                                        alt="Foto da ferida"
+                                        className="w-full max-w-sm rounded-2xl border border-purple-100 shadow-sm hover:opacity-90 transition-opacity object-cover max-h-64"
+                                      />
+                                    </a>
+                                    {obs.value_string && (
+                                      <p className="text-sm text-slate-600 mt-2 italic">"{obs.value_string}"</p>
+                                    )}
+                                    {!obs.reviewed_at && (
+                                      <button
+                                        onClick={() => markReviewed(obs.id)}
+                                        className="mt-3 flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition-all shadow-sm"
+                                      >
+                                        <CheckCircle2 size={13} /> Marcar como Revisado pela Equipe
+                                      </button>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <p className={`text-sm leading-relaxed ${obs.category === 'resposta-agente' ? 'text-slate-700 bg-green-50 border border-green-100 rounded-2xl px-4 py-3' : 'text-slate-600'}`}>
+                                    {obs.value_string}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )
                 })}

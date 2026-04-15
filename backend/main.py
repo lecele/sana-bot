@@ -34,6 +34,7 @@ SANA_SUPABASE_URL = os.getenv("SANA_SUPABASE_URL", "")
 SANA_SUPABASE_KEY = os.getenv("SANA_SUPABASE_KEY", "")
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "")
+TEAM_TELEGRAM_CHAT_ID = os.getenv("TEAM_TELEGRAM_CHAT_ID", "")
 
 supabase: Client = create_client(SANA_SUPABASE_URL, SANA_SUPABASE_KEY)
 
@@ -168,11 +169,26 @@ async def get_observations():
     """Retorna lista de avaliações da IA para a tela de Avaliações IA."""
     try:
         res = supabase.table("sana_observation").select(
-            "id, category, value_string, media_url, created_at, encounter_id, sana_encounter(patient_id, reason_reference, sana_patient(name))"
+            "id, category, value_string, media_url, reviewed_at, created_at, encounter_id, sana_encounter(patient_id, reason_reference, sana_patient(name))"
         ).order("created_at", desc=True).limit(50).execute()
         return {"observations": res.data or []}
     except Exception as e:
         logger.error(f"Erro ao buscar observações: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.patch("/api/observations/{obs_id}/review")
+async def review_observation(obs_id: str):
+    """Marca uma observação como revisada pela equipe clínica."""
+    try:
+        from datetime import datetime
+        supabase.table("sana_observation").update({
+            "reviewed_at": datetime.utcnow().isoformat()
+        }).eq("id", obs_id).execute()
+        logger.info(f"Observacao {obs_id} marcada como revisada.")
+        return {"status": "reviewed"}
+    except Exception as e:
+        logger.error(f"Erro ao marcar como revisado: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -278,6 +294,9 @@ async def telegram_webhook(request: Request):
                         logger.info(f"Encounters ativos para patient_id={pid}: {enc_foto.data}")
                         if enc_foto.data:
                             eid = enc_foto.data[0]["id"]
+                            # Busca cirurgia do paciente para o alerta
+                            enc_info = supabase.table("sana_encounter").select("reason_reference").eq("id", eid).execute()
+                            surgery_info = enc_info.data[0]["reason_reference"] if enc_info.data else "Procedimento nao informado"
                             ins = supabase.table("sana_observation").insert({
                                 "encounter_id": eid,
                                 "category": "foto-ferida",
@@ -286,6 +305,22 @@ async def telegram_webhook(request: Request):
                             }).execute()
                             logger.info(f"Observacao inserida: {ins.data}")
                             salvar_analise_ferida(pid, pname, img_url, legenda=text)
+                            # Alerta para equipe clinica
+                            if TEAM_TELEGRAM_CHAT_ID:
+                                alert_msg = (
+                                    f"Alerta SANA - Nova Foto Recebida\n\n"
+                                    f"Paciente: {pname}\n"
+                                    f"Procedimento: {surgery_info}\n"
+                                    f"Foto enviada agora para analise da IA.\n\n"
+                                    f"Acesse o painel para revisar:\n"
+                                    f"https://sana-clinico.vercel.app"
+                                )
+                                async with httpx.AsyncClient() as alert_client:
+                                    await alert_client.post(
+                                        f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage",
+                                        json={"chat_id": TEAM_TELEGRAM_CHAT_ID, "text": alert_msg}
+                                    )
+                                logger.info(f"Alerta enviado para equipe: {TEAM_TELEGRAM_CHAT_ID}")
                             break
                 else:
                     logger.warning(f"chat_id={chat_id} nao encontrado em sana_patient")
