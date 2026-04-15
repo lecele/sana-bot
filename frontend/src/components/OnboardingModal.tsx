@@ -64,17 +64,22 @@ export function OnboardingModal({ isOpen, onClose }: OnboardingModalProps) {
         >
           {/* Header com context relativo para segurar o botão */}
           <div className="p-10 pb-6 relative">
-            {/* Botão fechar redesenhado e realocado */}
-            <button
-              type="button"
-              onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleClose(); }}
-              onPointerDown={(e) => { e.stopPropagation(); handleClose(); }}
-              className="absolute top-6 right-6 z-[9999] p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-red-500 active:scale-95 rounded-full transition-all cursor-pointer shadow-sm border border-slate-200/50"
-              title="Fechar"
-              aria-label="Fechar modal"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            {/* Botão fechar nativo do Radix */}
+            <Dialog.Close asChild>
+              <button
+                type="button"
+                className="absolute top-6 right-6 z-[9999] p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-red-500 active:scale-95 rounded-full transition-all cursor-pointer shadow-sm border border-slate-200/50"
+                title="Fechar"
+                aria-label="Fechar modal"
+                onClick={() => {
+                  setGeneratedLink('');
+                  setPatientName('');
+                  setSurgeryType('');
+                }}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </Dialog.Close>
 
             <div className="w-14 h-14 bg-gradient-to-br from-sky-400 to-blue-500 rounded-2xl shadow-lg shadow-sky-500/20 flex items-center justify-center mb-6">
               <ActivitySquare className="text-white w-7 h-7" />
