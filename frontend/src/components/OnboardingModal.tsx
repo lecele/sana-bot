@@ -62,8 +62,20 @@ export function OnboardingModal({ isOpen, onClose }: OnboardingModalProps) {
           className="fixed left-1/2 top-1/2 z-[9999] w-full max-w-[480px] max-h-[90vh] -translate-x-1/2 -translate-y-1/2 overflow-y-auto bg-white rounded-[28px] shadow-2xl border border-slate-200 p-0 focus:outline-none"
           onEscapeKeyDown={handleClose}
         >
-          {/* Header */}
-          <div className="p-10 pb-6">
+          {/* Header com context relativo para segurar o botão */}
+          <div className="p-10 pb-6 relative">
+            {/* Botão fechar redesenhado e realocado */}
+            <button
+              type="button"
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleClose(); }}
+              onPointerDown={(e) => { e.stopPropagation(); handleClose(); }}
+              className="absolute top-6 right-6 z-[9999] p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-red-500 active:scale-95 rounded-full transition-all cursor-pointer shadow-sm border border-slate-200/50"
+              title="Fechar"
+              aria-label="Fechar modal"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
             <div className="w-14 h-14 bg-gradient-to-br from-sky-400 to-blue-500 rounded-2xl shadow-lg shadow-sky-500/20 flex items-center justify-center mb-6">
               <ActivitySquare className="text-white w-7 h-7" />
             </div>
@@ -148,18 +160,6 @@ export function OnboardingModal({ isOpen, onClose }: OnboardingModalProps) {
               </button>
             )}
           </div>
-
-          {/* Botão fechar — nativo do Radix */}
-          <Dialog.Close asChild>
-            <button
-              type="button"
-              className="absolute top-4 right-4 p-2 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-full transition-all bg-white border border-slate-200 shadow-sm cursor-pointer"
-              title="Fechar"
-              aria-label="Fechar modal"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </Dialog.Close>
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
