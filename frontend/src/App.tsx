@@ -35,6 +35,7 @@ interface Observation {
   id: string
   category: string
   value_string: string
+  media_url?: string
   created_at: string
   encounter_id: string
   sana_encounter?: {
@@ -427,7 +428,6 @@ export default function App() {
           </div>
         )}
 
-        {/* ── AVALIAÇÕES IA ── */}
         {view === 'observations' && (
           <div className="p-8 w-full space-y-6">
             <div>
@@ -461,7 +461,21 @@ export default function App() {
                             {categoryLabel(obs.category)}
                           </span>
                         </div>
-                        <p className="text-sm text-slate-600 mt-1.5 leading-relaxed line-clamp-3">{obs.value_string}</p>
+                        {/* Exibe foto se for categoria foto-ferida */}
+                        {obs.category === 'foto-ferida' && obs.media_url ? (
+                          <a href={obs.media_url} target="_blank" rel="noopener noreferrer" className="block mt-2">
+                            <img
+                              src={obs.media_url}
+                              alt="Foto da ferida"
+                              className="w-full max-w-sm rounded-2xl border border-purple-100 shadow-sm hover:opacity-90 transition-opacity object-cover max-h-64"
+                            />
+                            {obs.value_string && (
+                              <p className="text-sm text-slate-600 mt-2 leading-relaxed italic">"{obs.value_string}"</p>
+                            )}
+                          </a>
+                        ) : (
+                          <p className="text-sm text-slate-600 mt-1.5 leading-relaxed line-clamp-3">{obs.value_string}</p>
+                        )}
                         <p className="text-xs text-slate-400 mt-2 flex items-center gap-1">
                           <Clock size={11} /> {timeAgo(obs.created_at)}
                         </p>

@@ -168,7 +168,7 @@ async def get_observations():
     """Retorna lista de avaliações da IA para a tela de Avaliações IA."""
     try:
         res = supabase.table("sana_observation").select(
-            "id, category, value_string, created_at, encounter_id, sana_encounter(patient_id, reason_reference, sana_patient(name))"
+            "id, category, value_string, media_url, created_at, encounter_id, sana_encounter(patient_id, reason_reference, sana_patient(name))"
         ).order("created_at", desc=True).limit(50).execute()
         return {"observations": res.data or []}
     except Exception as e:
@@ -274,14 +274,18 @@ async def telegram_webhook(request: Request):
                     patient_name_mem = pat_res.data[0].get("name", "paciente")
                     enc_res = supabase.table("sana_encounter").select("id").eq("patient_id", patient_id).eq("status", "in-progress").execute()
                     if enc_res.data:
-                        encounter_id = enc_res.data[0]["id"]
+                        encounter_id_foto = enc_res.data[0]["id"]
                         supabase.table("sana_observation").insert({
-                            "encounter_id": encounter_id,
+                            "encounter_id": encounter_id_foto,
                             "category": "foto-ferida",
-                            "value_string": f"Paciente enviou foto para analise via Telegram. URL: {img_url}"
+                            "value_string": text or "Paciente enviou foto para análise via Telegram.",
+                            "media_url": img_url
                         }).execute()
+                        logger.info(f"Foto salva para paciente {patient_id}, encounter {encounter_id_foto}")
                     # Salva no MemPalace
                     salvar_analise_ferida(patient_id, patient_name_mem, img_url, legenda=text)
+                else:
+                    logger.warning(f"Paciente com chat_id={chat_id} não encontrado para salvar foto.")
         except Exception as e:
             logger.error(f"Erro ao processar foto: {e}")
             content_blocks.append({"type": "text", "text": "O paciente enviou uma foto mas houve erro tecnico. Peca desculpas e peca para reenviar."})
