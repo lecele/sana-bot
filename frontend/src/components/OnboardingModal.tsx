@@ -80,7 +80,7 @@ export function OnboardingModal({ isOpen, onClose }: OnboardingModalProps) {
           <button
             type="button"
             onClick={handleClose}
-            className="absolute top-6 right-6 flex items-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-red-50 text-slate-500 hover:text-red-500 active:scale-95 rounded-full transition-all cursor-pointer shadow-[0_2px_10px_rgba(0,0,0,0.05)] border border-slate-200/60 font-bold text-xs"
+            className="absolute top-6 right-6 flex items-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 active:scale-95 rounded-full transition-all cursor-pointer shadow-[0_2px_10px_rgba(0,0,0,0.05)] border border-slate-200/60 font-bold text-xs"
           >
             Fechar <X className="w-4 h-4 text-inherit" />
           </button>
