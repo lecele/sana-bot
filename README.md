@@ -46,9 +46,9 @@ Etapa 1 - Cadastro do Paciente
 
 O medico ou secretaria acessa o painel web, clica em "Provisionar Paciente", preenche o nome e o tipo de cirurgia. O sistema cria automaticamente o prontuario no banco de dados e gera um link exclusivo para aquele paciente.
 
-Etapa 2 - Onboarding pelo Telegram
+Etapa 2 - Onboarding e Termo LGPD
 
-O profissional envia o link gerado para o paciente via WhatsApp, SMS ou e-mail. Quando o paciente clica no link, o Telegram abre automaticamente no chat com o bot. O bot recebe o codigo do paciente embutido no link, vincula o chat ao prontuario e envia uma mensagem de boas-vindas.
+O profissional envia o link gerado para o paciente via WhatsApp, SMS ou e-mail. Quando o paciente clica no link, o Telegram abre automaticamente no chat com o bot. O bot recebe o codigo do paciente embutido no link, vincula o chat ao prontuario e envia uma mensagem de boas-vindas e o Termo de Consentimento (LGPD). O paciente so consegue enviar mensagens ou fotos para a IA apos digitar "SIM", confirmando o uso de seus dados em conformidade com as normas legais.
 
 Etapa 3 - Monitoramento Continuo
 
@@ -106,16 +106,18 @@ Webhook Telegram: recebe todas as mensagens enviadas pelo paciente ao bot, proce
 Tecnologias: Python 3.11, FastAPI, LangGraph, LangChain, Gemini 2.5 Flash, Supabase, httpx.
 
 
-BANCO DE DADOS
---------------
+BANCO DE DADOS E MIDIA (LGPD)
+-----------------------------
 
-O Sana usa o Supabase (PostgreSQL na nuvem) com tres tabelas:
+O Sana usa o Supabase (PostgreSQL completo) com dados e midias blindadas em privacidade:
 
-Tabela de pacientes: guarda nome e o ID de chat do Telegram, vinculado no momento do onboarding.
+Tabela de pacientes: guarda nome e o ID de chat do Telegram, alem dos logs oficiais de permissao de tratamento de dados (`consent_given` e `consent_date`).
 
-Tabela de encontros: registra cada periodo de acompanhamento, com status e tipo de cirurgia.
+Tabela de encontros: registra cada acompanhamento, com diagnostico e procedimentos.
 
-Tabela de observacoes: armazena cada avaliacao feita pelo agente de IA durante o monitoramento.
+Tabela de observacoes: armazena cada triagem feita e referencia privada das imagens locais.
+
+Armazenamento Privado (Buckets): As fotos nao ficam disponiveis de forma publica. O backend extrai do Telegram, deposita num cofre inacessivel (`sana_media`) do Supabase e so entao fornece para a interface web via URLs Assinadas (Signed URLs) de curtissima duracao (60 minutos).
 
 
 INFRAESTRUTURA E DEPLOY
