@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/webhook/:path*",
+      "destination": "http://129.121.33.171:8001/webhook/:path*"
+    },
+    {
       "source": "/api/:path*",
       "destination": "http://129.121.33.171:8001/api/:path*"
     }
