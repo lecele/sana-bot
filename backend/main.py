@@ -166,12 +166,26 @@ async def get_patients(search: str = ""):
 
 @app.get("/api/observations")
 async def get_observations():
-    """Retorna lista de avaliações da IA para a tela de Avaliações IA."""
+    """Retorna lista de avaliações da IA para a tela de Avaliações IA com Signed URLs seguros."""
     try:
         res = supabase.table("sana_observation").select(
             "id, category, value_string, media_url, reviewed_at, created_at, encounter_id, sana_encounter(patient_id, reason_reference, sana_patient(name))"
         ).order("created_at", desc=True).limit(50).execute()
-        return {"observations": res.data or []}
+        
+        obs_data = res.data or []
+        for obs in obs_data:
+            m_url = obs.get("media_url")
+            if m_url and m_url.startswith("storage:sana_media:"):
+                try:
+                    # Extrai o caminho dentro do bucket
+                    path = m_url.split("storage:sana_media:")[1]
+                    # Gera URL assinada valendo 60 min (3600s)
+                    signed = supabase.storage.from_("sana_media").create_signed_url(path, 3600)
+                    obs["media_url"] = signed["signedURL"]
+                except Exception as ex:
+                    logger.error(f"Failed to sign URL for {obs['id']}: {ex}")
+
+        return {"observations": obs_data}
     except Exception as e:
         logger.error(f"Erro ao buscar observações: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -248,19 +262,40 @@ async def telegram_webhook(request: Request):
             return {"status": "onboarded"}
         return {"status": "welcome"}
 
-    # --- PROCESSAMENTO COM IA ---
-    content_blocks = []
-
-    # --- MEMPALACE: busca histórico do paciente para enriquecer o prompt ---
+    # --- CHECK DE CONSENTIMENTO LGPD E BUSCA DE PACIENTE ---
     historico_paciente = ""
     try:
-        pat_mem = supabase.table("sana_patient").select("id, name").eq("chat_id", chat_id).execute()
+        pat_mem = supabase.table("sana_patient").select("id, name, consent_given").eq("chat_id", chat_id).execute()
         if pat_mem.data:
             _pid = pat_mem.data[0]["id"]
             _pname = pat_mem.data[0]["name"]
+            _consent = pat_mem.data[0].get("consent_given", False)
+
+            if not _consent:
+                if text.strip().lower() == "sim":
+                    from datetime import datetime
+                    supabase.table("sana_patient").update({
+                        "consent_given": True,
+                        "consent_date": datetime.utcnow().isoformat()
+                    }).eq("id", _pid).execute()
+                    await send_telegram_message(
+                        chat_id,
+                        "✅ *Excelente!* Seu consentimento foi registrado. Meu acompanhamento clínico acabou de começar.\n\nPode enviar mensagens sobre como está se sentindo ou fotos da sua ferida cirúrgica a qualquer momento."
+                    )
+                    return {"status": "consent_given"}
+                else:
+                    await send_telegram_message(
+                        chat_id,
+                        "⚠️ *Termo de Consentimento (LGPD)*\n\nPara seguirmos com um monitoramento seguro, precisamos que você autorize que o sistema armazene seus dados clínicos e processe suas imagens exclusivamente para a equipe médica que liderou a sua cirurgia.\n\nVocê autoriza esse acompanhamento? Responda apenas *SIM* para aceitar e começarmos."
+                    )
+                    return {"status": "waiting_consent"}
+
             historico_paciente = buscar_contexto_paciente(_pid, text or "avaliação de ferida")
     except Exception as _e:
-        logger.warning(f"MemPalace: não foi possível buscar contexto: {_e}")
+        logger.warning(f"Erro LGPD/MemPalace: {_e}")
+
+    # --- PROCESSAMENTO COM IA ---
+    content_blocks = []
 
     system_prompt = (
         "Voce e o Agente Clinico de Acompanhamento Sana, humano e empatico. "
@@ -294,6 +329,18 @@ async def telegram_webhook(request: Request):
                         logger.info(f"Encounters ativos para patient_id={pid}: {enc_foto.data}")
                         if enc_foto.data:
                             eid = enc_foto.data[0]["id"]
+                            
+                            # --- DOWNLOAD SEGURO E UPLOAD PARA BUCKET PRIVADO ---
+                            import time
+                            img_res = await client.get(img_url)
+                            storage_path = f"{pid}/{int(time.time())}.jpg"
+                            supabase.storage.from_("sana_media").upload(
+                                storage_path, 
+                                img_res.content, 
+                                {"content-type": "image/jpeg"}
+                            )
+                            internal_media_url = f"storage:sana_media:{storage_path}"
+
                             # Busca cirurgia do paciente para o alerta
                             enc_info = supabase.table("sana_encounter").select("reason_reference").eq("id", eid).execute()
                             surgery_info = enc_info.data[0]["reason_reference"] if enc_info.data else "Procedimento nao informado"
@@ -301,7 +348,7 @@ async def telegram_webhook(request: Request):
                                 "encounter_id": eid,
                                 "category": "foto-ferida",
                                 "value_string": text or "Paciente enviou foto para analise via Telegram.",
-                                "media_url": img_url
+                                "media_url": internal_media_url
                             }).execute()
                             logger.info(f"Observacao inserida: {ins.data}")
                             salvar_analise_ferida(pid, pname, img_url, legenda=text)
